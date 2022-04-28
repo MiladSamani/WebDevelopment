@@ -29,14 +29,15 @@ func main() {
 
 func home(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	err := HomeView.Template.ExecuteTemplate(w, HomeView.Layout, nil)
-	if err != nil {
-		panic(err)
-	}
+	must(HomeView.Render(w, nil))
 }
 func contact(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	err := ContactView.Template.ExecuteTemplate(w, ContactView.Layout, nil)
+	must(ContactView.Render(w, nil))
+}
+
+// A helper function that panics on any error
+func must(err error) {
 	if err != nil {
 		panic(err)
 	}
