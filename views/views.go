@@ -17,14 +17,6 @@ var (
 	TemplateExt = ".gohtml"
 )
 
-func layoutFiles() []string {
-	files, err := filepath.Glob(LayoutDir + "*" + TemplateExt)
-	if err != nil {
-		panic(err)
-	}
-	return files
-}
-
 // NewView files is a slice of filenames
 func NewView(layout string, files ...string) *View {
 	addTemplatePath(files)
@@ -38,7 +30,6 @@ func NewView(layout string, files ...string) *View {
 		Template: t,
 		Layout:   layout,
 	}
-
 }
 
 func (v *View) Render(w http.ResponseWriter, data interface{}) error {
@@ -52,23 +43,24 @@ func (v *View) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// addTemplateExt takes in a slice of strings
-// representing file paths for templates, and it appends
-// the TemplateExt extension to each string in the slice
-// Eg the input {"home"} would result in the output
-// {"home.gohtml"} if TemplateExt == ".gohtml"
+// layout files returns a slice of strings representing
+// the layout files used in our application
+func layoutFiles() []string {
+	files, err := filepath.Glob(LayoutDir + "*" + TemplateExt)
+	if err != nil {
+		panic(err)
+	}
+	return files
+}
+
+// addTemplateExt takes in a slice of strings representing file paths for templates, and it appends the TemplateExt extension to each string in the slice Eg the input {"home"} would result in the output {"home.gohtml"} if TemplateExt == ".gohtml"
 func addTemplateExt(files []string) {
 	for i, f := range files {
 		files[i] = f + TemplateExt
 	}
 }
 
-// addTemplatePath takes in a slice of strings
-// representing file paths for templates, and it prepends
-// the TemplateDir directory to each string in the slice
-//
-// Eg the input {"home"} would result in the output
-// {"views/home"} if TemplateDir == "views/"
+// addTemplatePath takes in a slice of strings representing file paths for templates, and it prepends the TemplateDir directory to each string in the slice Eg the input {"home"} would result in the output {"views/home"} if TemplateDir == "views/"
 func addTemplatePath(files []string) {
 	for i, f := range files {
 		files[i] = TemplateDir + f

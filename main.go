@@ -6,12 +6,6 @@ import (
 	"net/http"
 )
 
-//====================================================================
-//1. Create the global Template variable
-//2. Parse our template file at and assign it to the variable
-//3. Update our Template function to use the template variable
-//====================================================================
-
 func main() {
 	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers()
