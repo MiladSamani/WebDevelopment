@@ -11,7 +11,12 @@ var (
 	ErrNotFound = errors.New("models: resource not found")
 	// ErrInvalidID is returned when an invalid ID is provided to a method like Delete.
 	ErrInvalidID = errors.New("models: ID provided was invalid")
+	// ErrInvalidPassword is returned when an invalid password is used when attempting to authenticate a user.
+	ErrInvalidPassword = errors.New(
+		"models: incorrect password provided")
 )
+
+var userPwPepper = "secret-random-string"
 
 type UserService struct {
 	db *gorm.DB
@@ -64,7 +69,6 @@ func (us *UserService) DestructiveReset() error {
 
 // Create will create the provided user and backfield data like the ID, CreatedAt, and UpdatedAt fields.
 func (us *UserService) Create(user *User) error {
-	var userPwPepper = "secret-random-string"
 	pwBytes := []byte(user.Password + userPwPepper)
 	hashedBytes, err := bcrypt.GenerateFromPassword(
 		pwBytes, bcrypt.DefaultCost)
@@ -114,4 +118,27 @@ func (us *UserService) AutoMigrate() error {
 		return err
 	}
 	return nil
+}
+
+// Authenticate can be used to authenticate a user with the provided email address and password.
+// If the email address provided is invalid, this will return nil, ErrNotFound
+// If the password provided is invalid, this will return nil, ErrInvalidPassword
+// If the email and password are both valid, this will return user, nil
+// Otherwise if another error is encountered this will return nil, error
+func (us *UserService) Authenticate(email, password string) (*User, error) {
+	foundUser, err := us.ByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+	err = bcrypt.CompareHashAndPassword(
+		[]byte(foundUser.PasswordHash),
+		[]byte(password+userPwPepper))
+	switch err {
+	case nil:
+		return foundUser, nil
+	case bcrypt.ErrMismatchedHashAndPassword:
+		return nil, ErrInvalidPassword
+	default:
+		return nil, err
+	}
 }
