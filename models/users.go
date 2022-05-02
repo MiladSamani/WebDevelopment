@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"github.com/jinzhu/gorm"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -18,8 +19,10 @@ type UserService struct {
 
 type User struct {
 	gorm.Model
-	Name  string
-	Email string `gorm:"not null;unique_index"`
+	Name         string
+	Email        string `gorm:"not null;unique_index"`
+	Password     string `gorm:"-"`
+	PasswordHash string `gorm:"not null"`
 }
 
 func NewUserService(connectionInfo string) (*UserService, error) {
@@ -61,7 +64,17 @@ func (us *UserService) DestructiveReset() error {
 
 // Create will create the provided user and backfield data like the ID, CreatedAt, and UpdatedAt fields.
 func (us *UserService) Create(user *User) error {
+	var userPwPepper = "secret-random-string"
+	pwBytes := []byte(user.Password + userPwPepper)
+	hashedBytes, err := bcrypt.GenerateFromPassword(
+		pwBytes, bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = string(hashedBytes)
+	user.Password = ""
 	return us.db.Create(user).Error
+
 }
 
 // first will query using the provided gorm.DB, and it will get the first item returned and place it into dst. If nothing is found in the query, it will return ErrNotFound
