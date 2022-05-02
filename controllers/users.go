@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"WebDevelopment/models"
 	"WebDevelopment/views"
 	"fmt"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 type Users struct {
 	NewView *views.View
+	us      *models.UserService
 }
 
 type SignupForm struct {
@@ -17,10 +19,12 @@ type SignupForm struct {
 }
 
 //NewUsers function that will be used to construct and return a Users object.
-func NewUsers() *Users {
+func NewUsers(us *models.UserService) *Users {
 	return &Users{
 		NewView: views.NewView("bootstrap", "users/new"),
+		us:      us,
 	}
+
 }
 
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
@@ -35,15 +39,15 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
-	_, err := fmt.Fprintln(w, "Name is", form.Name)
-	if err != nil {
+	user := models.User{
+		Name:  form.Name,
+		Email: form.Email,
+	}
+	if err := u.us.Create(&user); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	_, err = fmt.Fprintln(w, "Email is", form.Email)
-	if err != nil {
-		return
-	}
-	_, err = fmt.Fprintln(w, "Password is", form.Password)
+	_, err := fmt.Fprintln(w, "User is", user)
 	if err != nil {
 		return
 	}
