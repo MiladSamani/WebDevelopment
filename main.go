@@ -13,7 +13,7 @@ const (
 	host     = "localhost"
 	port     = 5432
 	user     = "postgres"
-	password = "Milad1377007"
+	password = "-"
 	dbname   = "Milad"
 )
 
@@ -43,6 +43,11 @@ func main() {
 	r.HandleFunc("/signup", usersC.Create).Methods("POST")
 	r.Handle("/login", usersC.LoginView).Methods("GET")
 	r.HandleFunc("/login", usersC.Login).Methods("POST")
+	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
+	err = http.ListenAndServe(":3000", r)
+	if err != nil {
+		return
+	}
 	err = http.ListenAndServe(":3000", r)
 	if err != nil {
 		return

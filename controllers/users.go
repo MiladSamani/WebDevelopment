@@ -67,24 +67,46 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	if err := parseForm(r, &form); err != nil {
 		panic(err)
 	}
+
 	user, err := u.us.Authenticate(form.Email, form.Password)
-	switch err {
-	case models.ErrNotFound:
-		_, err2 := fmt.Fprintln(w, "Invalid email address.")
-		if err2 != nil {
-			return
+	if err != nil {
+		switch err {
+		case models.ErrNotFound:
+			_, err2 := fmt.Fprintln(w, "Invalid email address.")
+			if err2 != nil {
+				return
+			}
+		case models.ErrInvalidPassword:
+			_, err2 := fmt.Fprintln(w, "Invalid password provided.")
+			if err2 != nil {
+				return
+			}
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-	case models.ErrInvalidPassword:
-		_, err2 := fmt.Fprintln(w, "Invalid password provided.")
-		if err2 != nil {
-			return
-		}
-	case nil:
-		_, err2 := fmt.Fprintln(w, user)
-		if err2 != nil {
-			return
-		}
-	default:
+		return
+	}
+	signIn(w, user)
+	http.Redirect(w, r, "cookietest", http.StatusFound)
+}
+
+func signIn(w http.ResponseWriter, user *models.User) {
+	cookie := http.Cookie{
+		Name:  "email",
+		Value: user.Email,
+	}
+	http.SetCookie(w, &cookie)
+}
+
+// CookieTest is used to display cookies on the current user
+func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("email")
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = fmt.Fprint(w, "Email is:", cookie.Value)
+	if err != nil {
+		return
 	}
 }
