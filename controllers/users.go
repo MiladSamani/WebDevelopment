@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"WebDevelopment/models"
+	"WebDevelopment/rand"
 	"WebDevelopment/views"
 	"fmt"
 	"net/http"
@@ -55,10 +56,12 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	_, err := fmt.Fprintln(w, "User is", user)
+	err := u.signIn(w, &user)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	http.Redirect(w, r, "cookietest", http.StatusFound)
 }
 
 // Login is used to process the login form when a user tries to log in as an existing user (via email & pw). POST /login
@@ -72,40 +75,56 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err {
 		case models.ErrNotFound:
-			_, err2 := fmt.Fprintln(w, "Invalid email address.")
-			if err2 != nil {
-				return
-			}
+			fmt.Fprintln(w, "Invalid email address.")
 		case models.ErrInvalidPassword:
-			_, err2 := fmt.Fprintln(w, "Invalid password provided.")
-			if err2 != nil {
-				return
-			}
+			fmt.Fprintln(w, "Invalid password provided.")
 		default:
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
-	signIn(w, user)
-	http.Redirect(w, r, "cookietest", http.StatusFound)
-}
 
-func signIn(w http.ResponseWriter, user *models.User) {
-	cookie := http.Cookie{
-		Name:  "email",
-		Value: user.Email,
-	}
-	http.SetCookie(w, &cookie)
-}
-
-// CookieTest is used to display cookies on the current user
-func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("email")
+	err = u.signIn(w, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	_, err = fmt.Fprint(w, "Email is:", cookie.Value)
+	http.Redirect(w, r, "cookietest", http.StatusFound)
+}
+func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
+	if user.Remember == "" {
+		token, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = token
+		err = u.us.Update(user)
+		if err != nil {
+			return err
+		}
+	}
+	cookie := http.Cookie{
+		Name:     "remember_token",
+		Value:    user.Remember,
+		HttpOnly: true,
+	}
+	http.SetCookie(w, &cookie)
+	return nil
+}
+
+// CookieTest is used to display cookies on the current user
+func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("remember_token")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	user, err := u.us.ByRemember(cookie.Value)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = fmt.Fprintln(w, user)
 	if err != nil {
 		return
 	}
